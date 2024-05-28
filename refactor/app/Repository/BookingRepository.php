@@ -34,19 +34,16 @@ use Illuminate\Support\Facades\Auth;
 class BookingRepository extends BaseRepository
 {
 
-    protected $model;
-    protected $mailer;
     protected $logger;
 
     /**
      * @param Job $model
      */
-    function __construct(Job $model, MailerInterface $mailer)
+    function __construct(protected  Job $model, protected MailerInterface $mailer)
     {
         parent::__construct($model);
         $this->mailer = $mailer;
         $this->logger = new Logger('admin_logger');
-
         $this->logger->pushHandler(new StreamHandler(storage_path('logs/admin/laravel-' . date('Y-m-d') . '.log'), Logger::DEBUG));
         $this->logger->pushHandler(new FirePHPHandler());
     }
@@ -62,17 +59,21 @@ class BookingRepository extends BaseRepository
         $emergencyJobs = array();
         $noramlJobs = array();
         if ($cuser && $cuser->is('customer')) {
-            $jobs = $cuser->jobs()->with('user.userMeta', 'user.average', 'translatorJobRel.user.average', 'language', 'feedback')->whereIn('status', ['pending', 'assigned', 'started'])->orderBy('due', 'asc')->get();
+            $jobs = $cuser->jobs()
+              ->with(['user.userMeta', 'user.average', 'translatorJobRel.user.average', 'language', 'feedback'])
+              ->whereIn('status', ['pending', 'assigned', 'started'])
+              ->orderBy('due', 'asc')
+              ->get();
             $usertype = 'customer';
         } elseif ($cuser && $cuser->is('translator')) {
-            $jobs = Job::getTranslatorJobs($cuser->id, 'new');
-            $jobs = $jobs->pluck('jobs')->all();
+            $jobs = Job::getTranslatorJobs($cuser->id, 'new')->pluck('jobs')->all();
             $usertype = 'translator';
         }
+
         if ($jobs) {
-            foreach ($jobs as $jobitem) {
+            foreach ($jobs as $job_item) {
                 if ($jobitem->immediate == 'yes') {
-                    $emergencyJobs[] = $jobitem;
+                    $emergencyJobs[] = $job_item;
                 } else {
                     $noramlJobs[] = $jobitem;
                 }
@@ -1798,7 +1799,7 @@ class BookingRepository extends BaseRepository
                 if ($requestdata['booking_type'] == 'phone')
                     $allJobs->where('customer_phone_type', 'yes');
             }
-            
+
             $allJobs->orderBy('created_at', 'desc');
             $allJobs->with('user', 'language', 'feedback.user', 'translatorJobRel.user', 'distance');
             if ($limit == 'all')
@@ -1827,7 +1828,7 @@ class BookingRepository extends BaseRepository
                 });
                 if(isset($requestdata['count']) && $requestdata['count'] != 'false') return ['count' => $allJobs->count()];
             }
-            
+
             if (isset($requestdata['lang']) && $requestdata['lang'] != '') {
                 $allJobs->whereIn('from_language_id', $requestdata['lang']);
             }
@@ -2163,9 +2164,9 @@ class BookingRepository extends BaseRepository
 
     /**
      * Convert number of minutes to hour and minute variant
-     * @param  int $time   
-     * @param  string $format 
-     * @return string         
+     * @param  int $time
+     * @param  string $format
+     * @return string
      */
     private function convertToHoursMins($time, $format = '%02dh %02dmin')
     {
@@ -2177,7 +2178,7 @@ class BookingRepository extends BaseRepository
 
         $hours = floor($time / 60);
         $minutes = ($time % 60);
-        
+
         return sprintf($format, $hours, $minutes);
     }
 
