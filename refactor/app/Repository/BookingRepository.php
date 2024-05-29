@@ -1381,7 +1381,7 @@ class BookingRepository extends BaseRepository
   {
     // Fetch user details
     $user = $job->user()->first();
-    $email = $job->user_email ?? $user->email
+    $email = $job->user_email ?? $user->email;
     $name = $user->name;
 
     // Prepare email data
